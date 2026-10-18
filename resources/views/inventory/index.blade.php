@@ -1,0 +1,1 @@
+@extends('layouts.app') @section('content')<h1>Inventory — Batch Stock</h1><div class="card"><table><tr><th>Medicine</th><th>Batch</th><th>Expiry</th><th>Available units</th></tr>@foreach($rows as $x)<tr><td>{{$x->medicine_name}}</td><td>{{$x->batch_no}}</td><td>{{$x->expiry_date}}</td><td>{{$x->quantity}}</td></tr>@endforeach</table></div>@endsection
