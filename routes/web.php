@@ -1,5 +1,6 @@
 <?php
 use App\Http\Controllers\PharmacyController;
+use App\Http\Controllers\ReturnsController;
 use App\Http\Controllers\SalesPosController;
 use App\Http\Controllers\Admin\MedicineMasterController;
 use App\Http\Controllers\Auth\PharmacyLoginController;
@@ -30,6 +31,12 @@ Route::middleware('auth')->group(function(){
   Route::post('/purchases',[PharmacyController::class,'purchaseStore'])->name('purchases.store');
  });
  Route::middleware('can:bill-pharmacy')->post('/sales',[SalesPosController::class,'store'])->name('sales.store');
+ Route::middleware('can:manage-pharmacy')->group(function(){
+  Route::get('/returns',[ReturnsController::class,'index'])->name('returns.index');
+  Route::post('/returns/sales',[ReturnsController::class,'sale'])->name('returns.sale');
+  Route::post('/returns/purchases',[ReturnsController::class,'purchase'])->name('returns.purchase');
+  Route::post('/returns/adjustments',[ReturnsController::class,'adjustment'])->name('returns.adjustment');
+ });
  Route::middleware('can:manage-users')->group(function(){
   Route::get('/admin/users',[PharmacyUserController::class,'index'])->name('admin.users.index');
   Route::post('/admin/users',[PharmacyUserController::class,'store'])->name('admin.users.store');

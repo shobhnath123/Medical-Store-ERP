@@ -1,21 +1,22 @@
 <?php
 namespace App\Http\Controllers;
-use App\Models\Sale;
-use App\Models\StockBalance;
+use App\Models\{Sale,StockBalance,MedicinePacking};
 use App\Services\BillingService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-
 class SalesPosController extends Controller {
  public function index(){
   $batches=StockBalance::query()->join('medicine_batches as b','b.id','=','stock_balances.medicine_batch_id')
    ->join('medicines as m','m.id','=','b.medicine_id')
+   ->leftJoin('tax_codes as t','t.id','=','m.tax_code_id')
    ->where('stock_balances.store_id',1)->where('stock_balances.quantity','>',0)
    ->whereDate('b.expiry_date','>=',now()->startOfMonth()->toDateString())
-   ->where('m.is_active',true)
-   ->select('b.id','m.name','b.batch_no','b.expiry_date','b.sale_price_per_unit','b.mrp_per_unit','stock_balances.quantity')
+   ->where('m.is_active',true)->where('m.prescription_required',false)
+   ->select('b.id','b.medicine_id','m.name','b.batch_no','b.expiry_date','b.sale_price_per_unit','b.mrp_per_unit','stock_balances.quantity','t.illustrative_rate as tax_rate')
    ->orderBy('m.name')->orderBy('b.expiry_date')->get();
-  return view('sales.index',['batches'=>$batches,'rows'=>Sale::latest()->limit(30)->get()]);
+  $packings=MedicinePacking::where('is_active',true)->where('units_per_pack','>',0)
+    ->get(['id','medicine_id','label','units_per_pack','barcode']);
+  return view('sales.index',['batches'=>$batches,'packings'=>$packings,'rows'=>Sale::latest()->limit(30)->get()]);
  }
  public function store(Request $request,BillingService $service){
   $data=$request->validate([
@@ -25,13 +26,14 @@ class SalesPosController extends Controller {
    'discount'=>'nullable|numeric|min:0|max:99999999',
    'items'=>'required|array|min:1|max:50',
    'items.*.batch_id'=>'required|integer|distinct|exists:medicine_batches,id',
+   'items.*.packing_id'=>'required|integer|exists:medicine_packings,id',
    'items.*.quantity'=>'required|integer|min:1|max:1000000',
   ]);
   $sale=$service->post($data);
-  return redirect()->route('sales.show',$sale)->with('success','Invoice posted and stock deducted');
+  return redirect()->route('sales.show',$sale)->with('success','Demo invoice posted and stock deducted');
  }
  public function show(Sale $sale){
-  abort_unless($sale->store_id===1,404); // replace with store-scoped policy before production
+  abort_unless($sale->store_id===1,404);
   $items=$sale->hasMany(\App\Models\SaleItem::class)->with('batch.medicine')->get();
   return view('sales.invoice',compact('sale','items'));
  }
