@@ -11,7 +11,7 @@ use Illuminate\Validation\ValidationException;
 
 class PurchaseService
 {
-    public function __construct(private InventoryService $inventory) {}
+    public function __construct(private InventoryService $inventory, private AccountingService $accounting) {}
 
     public function post(array $data): Purchase
     {
@@ -50,7 +50,7 @@ class PurchaseService
                 $prepared[] = compact('row','medicine','packing','qty','freeQty','paid','gross','discount','taxable','rate','tax');
             }
             $purchase = Purchase::create([
-                'store_id'=>1,
+                'store_id'=>\App\Support\StoreContext::id(),
                 'supplier_id'=>$data['supplier_id'],
                 'invoice_no'=>$data['invoice_no'],
                 'invoice_date'=>$data['invoice_date'],
@@ -89,8 +89,9 @@ class PurchaseService
                     'tax_amount'=>$tax, 'taxable_amount'=>$taxable,
                     'line_total'=>round($taxable+$tax,2),
                 ]);
-                $this->inventory->add(1,$batch->id,$qty+$freeQty,'purchase','purchase_items',$item->id);
+                $this->inventory->add(\App\Support\StoreContext::id(),$batch->id,$qty+$freeQty,'purchase','purchase_items',$item->id);
             }
+            $this->accounting->purchase($purchase);
             return $purchase;
         }, 3);
     }

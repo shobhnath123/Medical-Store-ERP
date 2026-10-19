@@ -2,6 +2,7 @@
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 class Medicine extends Model {
+ use \App\Models\Concerns\BelongsToPharmacyCompany;
  protected $guarded = [];
  protected $casts = ['is_active'=>'boolean','prescription_required'=>'boolean'];
  public function category(){return $this->belongsTo(MedicineCategory::class,'category_id');}

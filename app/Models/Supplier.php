@@ -2,6 +2,7 @@
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 class Supplier extends Model {
+ use \App\Models\Concerns\BelongsToPharmacyCompany;
  protected $guarded = [];
  
 }

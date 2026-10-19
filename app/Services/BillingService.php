@@ -4,10 +4,10 @@ use App\Models\{MedicineBatch,MedicinePacking,Sale,SaleItem,StockBalance};
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 class BillingService {
- public function __construct(private InventoryService $inventory) {}
+ public function __construct(private InventoryService $inventory, private AccountingService $accounting) {}
  public function post(array $data): Sale {
   return DB::transaction(function () use ($data) {
-   $storeId=1; // DEMO store only, NOT multi-tenant safe.
+   $storeId=\App\Support\StoreContext::id();
    $lines=[];$subtotalCents=0;
    foreach($data['items'] as $index=>$row){
     $batch=MedicineBatch::with('medicine.taxCode')->findOrFail($row['batch_id']);
@@ -57,6 +57,7 @@ class BillingService {
    $sale->update(['invoice_no'=>sprintf('POS-%06d',$sale->id),'subtotal'=>$subtotalCents/100,
     'discount_total'=>$discountCents/100,'taxable_total'=>$taxableCents/100,'tax_total'=>$taxCents/100,
     'tax_mode'=>'inclusive','total'=>($subtotalCents-$discountCents)/100,'status'=>'posted']);
+   $this->accounting->sale($sale);
    return $sale;
   },3);
  }

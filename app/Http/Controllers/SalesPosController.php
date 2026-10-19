@@ -9,14 +9,14 @@ class SalesPosController extends Controller {
   $batches=StockBalance::query()->join('medicine_batches as b','b.id','=','stock_balances.medicine_batch_id')
    ->join('medicines as m','m.id','=','b.medicine_id')
    ->leftJoin('tax_codes as t','t.id','=','m.tax_code_id')
-   ->where('stock_balances.store_id',1)->where('stock_balances.quantity','>',0)
+   ->where('stock_balances.store_id',\App\Support\StoreContext::id())->where('stock_balances.quantity','>',0)
    ->whereDate('b.expiry_date','>=',now()->startOfMonth()->toDateString())
    ->where('m.is_active',true)->where('m.prescription_required',false)
    ->select('b.id','b.medicine_id','m.name','b.batch_no','b.expiry_date','b.sale_price_per_unit','b.mrp_per_unit','stock_balances.quantity','t.illustrative_rate as tax_rate')
    ->orderBy('m.name')->orderBy('b.expiry_date')->get();
   $packings=MedicinePacking::where('is_active',true)->where('units_per_pack','>',0)
     ->get(['id','medicine_id','label','units_per_pack','barcode']);
-  return view('sales.index',['batches'=>$batches,'packings'=>$packings,'rows'=>Sale::latest()->limit(30)->get()]);
+  return view('sales.index',['batches'=>$batches,'packings'=>$packings,'rows'=>Sale::where('store_id',\App\Support\StoreContext::id())->latest()->limit(30)->get()]);
  }
  public function store(Request $request,BillingService $service){
   $data=$request->validate([
@@ -33,7 +33,7 @@ class SalesPosController extends Controller {
   return redirect()->route('sales.show',$sale)->with('success','Demo invoice posted and stock deducted');
  }
  public function show(Sale $sale){
-  abort_unless($sale->store_id===1,404);
+  abort_unless((int)$sale->store_id===\App\Support\StoreContext::id(),404);
   $items=$sale->hasMany(\App\Models\SaleItem::class)->with('batch.medicine')->get();
   return view('sales.invoice',compact('sale','items'));
  }

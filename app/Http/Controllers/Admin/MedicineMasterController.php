@@ -10,12 +10,12 @@ class MedicineMasterController extends Controller {
  private function masterClass(string $type): string {abort_unless(isset(self::MASTERS[$type]),404); return self::MASTERS[$type];}
  public function masters(string $type){$class=$this->masterClass($type);return view('medicine-master.masters',['type'=>$type,'rows'=>$class::orderBy('name')->paginate(25)]);}
  public function storeMaster(Request $request,string $type){$class=$this->masterClass($type);
-  $data=$request->validate(['name'=>['required','string','max:255',Rule::unique((new $class)->getTable(),'name')], 'hsn_code'=>['nullable','string','max:16'], 'illustrative_rate'=>['nullable','numeric','between:0,100']]);
+  $data=$request->validate(['name'=>['required','string','max:255',Rule::unique((new $class)->getTable(),'name')->where('company_id',\App\Support\StoreContext::companyId())], 'hsn_code'=>['nullable','string','max:16'], 'illustrative_rate'=>['nullable','numeric','between:0,100']]);
   if($type!=='tax-codes') unset($data['hsn_code'],$data['illustrative_rate']);
   $class::create($data);return back()->with('success','Master record created');
  }
  public function updateMaster(Request $request,string $type,int $id){$class=$this->masterClass($type);$item=$class::findOrFail($id);
-  $data=$request->validate(['name'=>['required','string','max:255',Rule::unique($item->getTable(),'name')->ignore($id)],'is_active'=>['required','boolean']]);
+  $data=$request->validate(['name'=>['required','string','max:255',Rule::unique($item->getTable(),'name')->where('company_id',\App\Support\StoreContext::companyId())->ignore($id)],'is_active'=>['required','boolean']]);
   $item->update($data);return back()->with('success','Master record updated');
  }
  public function index(Request $request){
@@ -26,8 +26,8 @@ class MedicineMasterController extends Controller {
  private function validateMedicine(Request $request,?Medicine $medicine=null): array {return $request->validate([
   'name'=>['required','string','max:255'],'generic_name'=>['nullable','string','max:255'],
   'units_per_strip'=>['required','integer','min:1','max:10000'],
-  'category_id'=>['nullable','exists:medicine_categories,id'],'manufacturer_id'=>['nullable','exists:manufacturers,id'],
-  'brand_id'=>['nullable','exists:brands,id'],'tax_code_id'=>['nullable','exists:tax_codes,id'],
+  'category_id'=>['nullable',Rule::exists('medicine_categories','id')->where('company_id',\App\Support\StoreContext::companyId())],'manufacturer_id'=>['nullable',Rule::exists('manufacturers','id')->where('company_id',\App\Support\StoreContext::companyId())],
+  'brand_id'=>['nullable',Rule::exists('brands','id')->where('company_id',\App\Support\StoreContext::companyId())],'tax_code_id'=>['nullable',Rule::exists('tax_codes','id')->where('company_id',\App\Support\StoreContext::companyId())],
   'hsn_code'=>['nullable','string','max:16'],'composition'=>['nullable','string','max:255'],
   'dosage_form'=>['nullable','string','max:60'],'schedule_type'=>['nullable',Rule::in(['H','H1','X','OTHER'])],
   'prescription_required'=>['required','boolean'],'is_active'=>['required','boolean']
@@ -35,9 +35,9 @@ class MedicineMasterController extends Controller {
  public function store(Request $request){$data=$this->validateMedicine($request);Medicine::create($data);return back()->with('success','Medicine added');}
  public function update(Request $request,Medicine $medicine){$medicine->update($this->validateMedicine($request,$medicine));return back()->with('success','Medicine updated');}
  public function addPacking(Request $request,Medicine $medicine){$data=$request->validate([
-  'unit_id'=>['required','exists:units,id'],'label'=>['required','string','max:80',Rule::unique('medicine_packings','label')->where('medicine_id',$medicine->id)],
+  'unit_id'=>['required',Rule::exists('units','id')->where('company_id',\App\Support\StoreContext::companyId())],'label'=>['required','string','max:80',Rule::unique('medicine_packings','label')->where('medicine_id',$medicine->id)->where('company_id',\App\Support\StoreContext::companyId())],
   'units_per_pack'=>['required','integer','min:1','max:100000'],
-  'barcode'=>['nullable','string','max:100',Rule::unique('medicine_packings','barcode')]
+  'barcode'=>['nullable','string','max:100',Rule::unique('medicine_packings','barcode')->where('company_id',\App\Support\StoreContext::companyId())]
  ]);$medicine->packings()->create($data);return back()->with('success','Packing added');}
  public function search(Request $request){$search=trim((string)$request->query('q',''));
   if(strlen($search)<2)return response()->json([]);

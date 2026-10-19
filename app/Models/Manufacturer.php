@@ -1,4 +1,5 @@
 <?php
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
-class Manufacturer extends Model { protected $table = 'manufacturers'; protected $guarded = []; }
+class Manufacturer extends Model {
+ use \App\Models\Concerns\BelongsToPharmacyCompany; protected $table = 'manufacturers'; protected $guarded = []; }

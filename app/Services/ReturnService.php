@@ -8,7 +8,7 @@ class ReturnService {
  // never automatically added to saleable stock.
  public function salesReturn(array $data,int $userId): int {
   return DB::transaction(function() use($data,$userId){
-   $sale=Sale::whereKey($data['sale_id'])->lockForUpdate()->firstOrFail();
+   $sale=Sale::where('store_id',\App\Support\StoreContext::id())->whereKey($data['sale_id'])->lockForUpdate()->firstOrFail();
    if($sale->status!=='posted') throw ValidationException::withMessages(['sale_id'=>'Only posted sales can be returned.']);
    $item=SaleItem::where('sale_id',$sale->id)->whereKey($data['sale_item_id'])->lockForUpdate()->firstOrFail();
    $previous=(int)DB::table('sales_return_items')->join('sales_returns','sales_returns.id','=','sales_return_items.sales_return_id')->where('sales_return_items.sale_item_id',$item->id)->where('sales_returns.status','posted')->sum('sales_return_items.quantity');
@@ -26,7 +26,7 @@ class ReturnService {
  }
  public function purchaseReturn(array $data,int $userId): int {
   return DB::transaction(function() use($data,$userId){
-   $purchase=Purchase::whereKey($data['purchase_id'])->lockForUpdate()->firstOrFail();
+   $purchase=Purchase::where('store_id',\App\Support\StoreContext::id())->whereKey($data['purchase_id'])->lockForUpdate()->firstOrFail();
    if($purchase->status!=='posted') throw ValidationException::withMessages(['purchase_id'=>'Only posted purchases can be returned.']);
    $item=PurchaseItem::where('purchase_id',$purchase->id)->whereKey($data['purchase_item_id'])->lockForUpdate()->firstOrFail();
    $prior=(int)DB::table('purchase_return_items')->where('purchase_item_id',$item->id)->sum('quantity');
@@ -46,7 +46,7 @@ class ReturnService {
  }
  public function adjust(array $data,int $userId): int {
   return DB::transaction(function()use($data,$userId){
-   $storeId=1; // DEMO only. Replace with authorized store context.
+   $storeId=\App\Support\StoreContext::id();
    $qty=(int)$data['quantity_change'];
    if($qty===0 || abs($qty)>1000000) throw ValidationException::withMessages(['quantity_change'=>'Invalid adjustment quantity.']);
    $balance=StockBalance::where('store_id',$storeId)->where('medicine_batch_id',$data['medicine_batch_id'])->lockForUpdate()->firstOrFail();
